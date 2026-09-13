@@ -143,7 +143,7 @@ function gitCounts(d) {
 // ═══════════════════════════════════════════════════════════════════
 module.exports = {
   name: 'bracket-panel',
-  description: '方括号分段 + 三行信息面板（固定三行，含时长/环境/缓存状态）',
+  description: '方括号分段 + 三行信息面板（固定三行，含时长/环境/缓存命中率）',
 
   separator: ' - ',
   separatorColor: C.bracket,
