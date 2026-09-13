@@ -65,6 +65,25 @@ node ~/.claude/statusline/install.js --context-tokens=1000000
 
 ## 日常使用
 
+### ⚠ 先看你的 shell —— `~` 不是到处都能用
+
+下面的命令用 `~` 写。**`~` 只有 bash / zsh / Git Bash 会展开**；
+`cmd.exe` 不认它，会把它当成普通目录名，于是拼出一个不存在的路径：
+
+```
+Error: Cannot find module 'C:\Users\anpluto\~\.claude\statusline\pick.js'
+```
+
+三种 shell 的正确写法（以 `pick.js` 为例，其它脚本同理）：
+
+| Shell | 写法 |
+| --- | --- |
+| cmd.exe | `node %USERPROFILE%\.claude\statusline\pick.js` |
+| PowerShell | `node $env:USERPROFILE\.claude\statusline\pick.js` |
+| bash / Git Bash / WSL | `node ~/.claude/statusline/pick.js` |
+
+### 命令
+
 ```bash
 node ~/.claude/statusline/pick.js                # ★ 交互式选择器：上下箭头选，回车确认
 node ~/.claude/statusline/switch.js              # 列出所有主题 + 每个的实际渲染效果
