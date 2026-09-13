@@ -34,14 +34,6 @@ const TEXTS = {
   // 工作时长，参数是 时 / 分 / 秒
   duration: (h, m, s) => `你已经工作了:${pad(h)}小时 ${pad(m)}分钟 ${pad(s)}秒`,
 
-  // prompt cache 状态词。依据 payload.prompt_cache 判断，见文件底部 cacheState()
-  cacheStates: {
-    warm: 'Warm', // 缓存还热着
-    fresh: 'Fresh', // 有缓存但已过期
-    cold: 'Cold', // 完全没缓存
-    unknown: '--',
-  },
-
   // git 三个计数的前缀符号
   gitMarks: { staged: '+', modified: '✖', untracked: '?' },
 
@@ -70,12 +62,11 @@ const C = {
   duration: 'brightWhite',
   greeting: 'brightGreen',
   path: 'brightCyan',
-  time: 'brightWhite',
   ctxLabel: 'brightWhite',
   ctxValue: 'brightCyan',
-  cacheState: 'brightGreen',
   size: 'brightMagenta',
   tokens: 'brightWhite',
+  cache: 'brightGreen',
   status: 'brightYellow',
 };
 
@@ -101,13 +92,25 @@ function greeting(hour) {
   return text;
 }
 
-/** prompt cache 状态词 */
-function cacheState(d) {
-  const c = d.cache;
-  if (!c) return TEXTS.cacheStates.unknown;
-  if (c.warm) return TEXTS.cacheStates.warm;
-  if (c.observed) return TEXTS.cacheStates.fresh;
-  return TEXTS.cacheStates.cold;
+/**
+ * 含缓存的输入总量 = 未缓存输入 + 缓存写入 + 缓存读取。
+ * 只显示 tokens.in 会让人误以为上下文只有几 k —— 实际上绝大部分走了缓存。
+ */
+function totalInput(d) {
+  return d.tokens.in + (d.tokens.cacheCreation || 0) + (d.tokens.cacheRead || 0);
+}
+
+/**
+ * 缓存命中率 = 缓存读取 / 输入总量。
+ * 值得盯的指标：DeepSeek 缓存命中 $0.145/M，未命中 $1.74/M，差 12 倍。
+ * 拿不到 token 细分时（transcript 读不到）返回 null，整段隐藏 ——
+ * 这种情况算出来的命中率是假的。
+ */
+function cacheHitRate(d) {
+  if (!d.tokens.exact) return null;
+  const total = totalInput(d);
+  if (total <= 0) return null;
+  return d.tokens.cacheRead / total;
 }
 
 /** 把毫秒拆成 时/分/秒 */
@@ -151,8 +154,8 @@ module.exports = {
   // 被 when 隐藏的段会在渲染后过滤掉，不会让后面的段串位。
   wrap: [
     [0, 1, 2, 3, 4, 5, 6], // 第一行
-    [7, 8, 9, 10, 11, 12], // 第二行（9/10/11 是 CPU/RAM/Disk，默认隐藏）
-    [13, 14, 15, 16, 17], // 第三行
+    [7, 8, 9, 10, 11], // 第二行（9/10/11 是 CPU/RAM/Disk，默认隐藏）
+    [12, 13, 14, 15, 16], // 第三行
   ],
 
   segments: [
@@ -261,13 +264,9 @@ module.exports = {
       ],
     },
 
-    // 12 时间戳
-    {
-      parts: [{ text: (d) => d.now.datetime, color: C.time }],
-    },
-
     // ── 第三行 ────────────────────────────────────────────────────
-    // 13 上下文占用 + 缓存状态
+    // 12 上下文占用。只显示已用百分比 —— 之前写成 "9%·91% Warm"，
+    //    剩余百分比是 100 减出来的、缓存状态另有所指，三样挤在一起太冗杂。
     {
       icon: '📝',
       iconColor: C.ctxLabel,
@@ -275,16 +274,11 @@ module.exports = {
       innerSep: ' ',
       parts: [
         { text: () => 'CTX', color: C.ctxLabel },
-        {
-          text: (d) =>
-            `${Math.round(d.context.usedPct)}%·${Math.round(d.context.remainingPct ?? 100 - d.context.usedPct)}%`,
-          color: C.ctxValue,
-        },
-        { text: (d) => cacheState(d), color: C.cacheState },
+        { text: (d) => `${Math.round(d.context.usedPct)}%`, color: C.ctxValue },
       ],
     },
 
-    // 14 上下文窗口大小
+    // 13 上下文窗口大小
     {
       when: (d) => !!d.model.window,
       icon: '📐',
@@ -295,33 +289,32 @@ module.exports = {
       ],
     },
 
-    // 15 In / Out token
+    // 14 输入 / 输出 token
+    //    In 显示的是**含缓存的输入总量**，不是 tokens.in 那一个字段 ——
+    //    tokens.in 只是未命中缓存的部分，单独显示会小得让人误判上下文。
     {
-      when: (d) => d.tokens.in > 0 || d.tokens.out > 0,
+      when: (d) => totalInput(d) > 0 || d.tokens.out > 0,
       icon: '📥',
       iconColor: C.tokens,
       innerSep: ' ',
       parts: [
-        { text: (d) => `In: ${d.tokens.in}`, color: C.tokens },
-        { text: (d) => `Out: ${d.tokens.out}`, color: C.tokens },
+        { text: (d) => `In: ${d.fmt.tokens(totalInput(d))}`, color: C.tokens },
+        { text: (d) => `Out: ${d.fmt.tokens(d.tokens.out)}`, color: C.tokens },
       ],
     },
 
-    // 16 Crt（缓存写入） / Rd（缓存读取）
-    //    这两个只有从 transcript 读到 usage 时才有值；读不到就整段隐藏，
-    //    而不是显示 0 —— 显示 0 会让人以为是真的没有缓存。
+    // 15 缓存命中率。拿不到 token 细分时整段隐藏 —— 那种情况下算出来的是假值。
     {
-      when: (d) => d.tokens.exact,
+      when: (d) => cacheHitRate(d) !== null,
       icon: '🗄',
-      iconColor: C.tokens,
-      innerSep: ' ',
+      iconColor: C.cache,
       parts: [
-        { text: (d) => `Crt: ${d.tokens.cacheCreation}`, color: C.tokens },
-        { text: (d) => `Rd: ${d.tokens.cacheRead}`, color: C.tokens },
+        { text: () => 'Cache:', color: C.cache },
+        { text: (d) => `${Math.round(cacheHitRate(d) * 100)}%`, color: C.cache },
       ],
     },
 
-    // 17 状态文案
+    // 16 状态文案
     {
       icon: '⌨',
       iconColor: C.status,
