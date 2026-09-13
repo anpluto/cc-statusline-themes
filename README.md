@@ -65,22 +65,36 @@ node ~/.claude/statusline/install.js --context-tokens=1000000
 
 ## 日常使用
 
-### ⚠ 先看你的 shell —— `~` 不是到处都能用
+### ⚠ Windows 上请用字面绝对路径
 
-下面的命令用 `~` 写。**`~` 只有 bash / zsh / Git Bash 会展开**；
-`cmd.exe` 不认它，会把它当成普通目录名，于是拼出一个不存在的路径：
+**别用 `~`，也别用 `%USERPROFILE%` / `$env:USERPROFILE%`** —— 它们在不同 shell 里
+能不能展开完全不一样，猜错就是 `MODULE_NOT_FOUND`：
 
 ```
+# cmd 里（~ 不展开）
 Error: Cannot find module 'C:\Users\anpluto\~\.claude\statusline\pick.js'
+
+# PowerShell 里（它把参数原样传给 node.exe，~ 同样不展开；
+# 而 %USERPROFILE% 又不是它的语法）
+Error: Cannot find module 'C:\Users\anpluto\%USERPROFILE%\.claude\statusline\pick.js'
 ```
 
-三种 shell 的正确写法（以 `pick.js` 为例，其它脚本同理）：
+**直接写字面路径，任何 shell 都认，不需要任何展开**（把 `anpluto` 换成你的用户名）：
 
-| Shell | 写法 |
+```
+node C:\Users\anpluto\.claude\statusline\pick.js
+```
+
+各 shell 的等效写法（供参考，不是必须）：
+
+| Shell | 等价写法 |
 | --- | --- |
 | cmd.exe | `node %USERPROFILE%\.claude\statusline\pick.js` |
 | PowerShell | `node $env:USERPROFILE\.claude\statusline\pick.js` |
 | bash / Git Bash / WSL | `node ~/.claude/statusline/pick.js` |
+
+> Windows PowerShell 5.1 和 7 对原生命令（`node.exe`）都**不做** tilde 展开，
+> 这一点和 cmd 一样，只是变量语法不同。所以「用 `~` 报错」并不代表你在 cmd 里。
 
 ### 命令
 
