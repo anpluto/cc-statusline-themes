@@ -72,8 +72,11 @@ function main() {
     return;
   }
 
-  // 宽度：命令行 > 环境变量 > 探测
-  const width = Number.isFinite(args.width) ? args.width : getTerminalWidth(cache, 20000);
+  // 宽度：命令行 > 环境变量 > 探测。
+  // TTL 给 60 秒 —— 终端宽度几乎不变，而探测一次要 78ms（cmd /c mode con）。
+  // 代价是拖拽改变终端宽度后，折行最多 60 秒才跟上。
+  // 想彻底免掉这个开销，设 CLAUDE_STATUSLINE_WIDTH 写死宽度即可。
+  const width = Number.isFinite(args.width) ? args.width : getTerminalWidth(cache, 60000);
   writeCache(cache);
 
   try {

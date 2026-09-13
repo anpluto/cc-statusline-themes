@@ -11,12 +11,22 @@
  */
 
 const fs = require('fs');
+const os = require('os');
 const path = require('path');
 const { PassThrough } = require('stream');
 
-const DIR = __dirname;
-const ACTIVE = path.join(DIR, 'active');
-const backup = fs.existsSync(ACTIVE) ? fs.readFileSync(ACTIVE, 'utf8') : null;
+// ⚠ 必须在 require lib/themes 之前设好 —— themes.js 一旦被加载，
+// 就会用默认路径建好常量，之后再改环境变量也没用了。
+//
+// 这个测试原先直接操作真实的 active 文件，靠「先备份、跑完还原」收尾。
+// 但按键是通过流异步派发的，还原会被后面才触发的写入盖掉 ——
+// 实际后果是把用户正在用的主题改成了某个测试用例的值。
+// 改成写临时文件后，真实配置完全不会被碰。
+const ACTIVE = path.join(os.tmpdir(), 'ccsl-test-active');
+process.env.CCSL_ACTIVE_FILE = ACTIVE;
+
+const REAL_ACTIVE = path.join(__dirname, 'active');
+const realBefore = fs.existsSync(REAL_ACTIVE) ? fs.readFileSync(REAL_ACTIVE, 'utf8') : null;
 
 const tick = () => new Promise((r) => setTimeout(r, 30));
 
@@ -121,9 +131,16 @@ const start = ALL[0];
   console.log(`${hasPreview ? '✓' : '✗'} 显示了预览区`);
   hasPreview ? pass++ : fail++;
 
-  // 还原 active
-  if (backup !== null) fs.writeFileSync(ACTIVE, backup);
+  try {
+    fs.unlinkSync(ACTIVE);
+  } catch {}
+
+  // 最重要的断言：真实配置必须没被动过
+  const realAfter = fs.existsSync(REAL_ACTIVE) ? fs.readFileSync(REAL_ACTIVE, 'utf8') : null;
+  const untouched = realBefore === realAfter;
+  console.log(`${untouched ? '✓' : '✗'} 真实 active 未被触碰（测试只写临时文件）`);
+  untouched ? pass++ : fail++;
 
   console.log(`\n${fail === 0 ? '全部通过' : '有失败'}：${pass} 通过 / ${fail} 失败`);
-  console.log('active 已还原为:', fs.readFileSync(ACTIVE, 'utf8').trim());
+  console.log('真实 active 仍是:', (realAfter || '(空)').trim());
 })();
