@@ -60,6 +60,9 @@ node ~/.claude/statusline/install.js --context-tokens=1000000
 
 换成别的模型时，把 `1000000` 改成该模型的真实窗口。
 
+**另一种办法**：把模型名写成 `deepseek-v4-pro[1m]` —— Claude Code 认这个后缀，
+见到就直接按 1M 算，不必设环境变量。两种方式等价，选一种即可。
+
 ## 日常使用
 
 ```bash
@@ -87,6 +90,21 @@ node ~/.claude/statusline/install.js --uninstall  # 卸载（还原 settings.jso
 | `emoji-line` | `🤖 模型 1M \| 🧠 强度 \| 📖 风格 \| 🌿 分支 ● \| ⚡ 9.0% · 90.5k tokens \| 🛠 6 mem · 1 skills · 0 mcp · 0 plugins` |
 | `minimal` | `DeepSeek-V4-Pro  main ✓  9%  $0.01` |
 | `powerline` | 背景色块 + 箭头过渡（需要 Nerd Font） |
+| `bracket-panel` | 方括号分段 + 三行信息面板，见下 |
+
+`bracket-panel` 固定三行，不随终端宽度变化：
+
+```
+[ 🔵 deepseek-v4-pro ] - [ 📦 v2.1.177 ] - [ ⚡ max ] - [ 🧠 Thinking ] - [ 🌿 main +3 ✖9 ?6 ] - [ 🐍 Env: base 3.13.9 ] - [ ⏱ 你已经工作了:00小时 03分钟 52秒 ]
+[ 晚上好 ] - [ anpluto@~/Projects/demo ] - [ 2026-09-13 20:31:28 ]
+[ 📝 CTX 9%·91% Warm ] - [ 📐 Size: 1M ] - [ 📥 In: 2169 Out: 2238 ] - [ 🗄 Crt: 4096 Rd: 88320 ] - [ ⌨ Claude酱正在努力工作中 (｀・ω・´) ]
+```
+
+**所有中文 / 日式文案都集中在文件顶部的 `TEXTS` 块**，改文案只动那一块，
+不用碰段定义。问候语按小时切换、时长格式、git 计数的符号都在里面。
+
+CPU / RAM / Disk 三段**已留好位置但默认不显示** —— `lib/sysinfo.js` 现在一律返回
+`null`，段自动隐藏；按那个文件里的说明实现后它们会自动出现，主题文件一个字都不用改。
 
 ## 自定义主题
 
@@ -144,11 +162,16 @@ module.exports = {
 | `d.context.usedPct` | 上下文占用百分比（可能是 `null`） |
 | `d.context.totalTokens` / `.tokensText` | token 数 / 已格式化的 `90.5k` |
 | `d.context.windowSize` | 窗口大小，如 `1000000` |
-| `d.cost.usd` / `.usdText` / `.durationText` | 花费 / 时长 |
+| `d.cost.usd` / `.usdText` / `.durationText` / `.durationMs` | 花费 / 时长 |
+| `d.tokens.in` / `.out` / `.cacheCreation` / `.cacheRead` / `.exact` | token 细分（拆自 transcript） |
+| `d.cache.warm` / `.observed` / `.hitRatio` / `.expiresAt` | prompt cache 状态 |
 | `d.counts.mem` / `.skills` / `.mcp` / `.plugins` / `.claudeMd` | 各项数量 |
-| `d.cwd` / `d.dirName` | 当前目录全路径 / 目录名 |
+| `d.system.cpu` / `.ram` / `.disk` | 系统信息，目前恒为 `null`（见 `lib/sysinfo.js`） |
+| `d.python.name` / `.version` | 当前 conda / venv 环境，没在用则为 `null` |
+| `d.cwd` / `d.dirName` / `d.path` | 目录全路径 / 目录名 / home 缩写成 `~` 的路径 |
+| `d.user` / `d.now.hour` / `.date` / `.time` / `.datetime` | 用户名 / 当前时间各字段 |
 | `d.version` / `d.sessionId` / `d.agent` / `d.vimMode` / `d.fastMode` | 环境信息 |
-| `d.fmt.tokens(n)` / `.window(n)` / `.duration(ms)` | 格式化工具 |
+| `d.fmt.tokens(n)` / `.window(n)` / `.duration(ms)` / `.bytes(n)` | 格式化工具 |
 
 ## 常见问题
 
