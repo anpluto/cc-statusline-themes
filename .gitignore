@@ -1,0 +1,12 @@
+# 本机状态，不进版本库 —— 否则换台机器会带上别人/别处的配置
+active
+.cache.json
+
+# 安装时的备份（可能包含 API 密钥，绝对不能提交）
+*.bak-statusline
+*.bak
+
+node_modules/
+npm-debug.log*
+.DS_Store
+Thumbs.db

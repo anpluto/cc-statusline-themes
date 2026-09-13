@@ -1,0 +1,8 @@
+# 统一用 LF 存进仓库。
+# 这几个脚本带 shebang（#!/usr/bin/env node），在 Windows 上若被 checkout 成
+# CRLF，到 macOS/Linux 上 shebang 会变成 "#!/usr/bin/env node\r"，直接执行会失败。
+* text=auto eol=lf
+
+*.png binary
+*.jpg binary
+*.ico binary

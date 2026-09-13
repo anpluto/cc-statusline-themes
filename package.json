@@ -1,0 +1,36 @@
+{
+  "name": "cc-statusline-themes",
+  "version": "1.0.0",
+  "description": "可切换主题的 Claude Code 终端状态栏 —— 零依赖，主题即文件",
+  "keywords": [
+    "claude-code",
+    "statusline",
+    "status-line",
+    "theme",
+    "cli"
+  ],
+  "license": "MIT",
+  "engines": {
+    "node": ">=18"
+  },
+  "os": [
+    "darwin",
+    "linux",
+    "win32"
+  ],
+  "scripts": {
+    "install-statusline": "node install.js",
+    "list": "node switch.js",
+    "preview": "node render.js --preview"
+  },
+  "files": [
+    "render.js",
+    "switch.js",
+    "install.js",
+    "fixture.js",
+    "README.md",
+    "LICENSE",
+    "lib/",
+    "themes/"
+  ]
+}
