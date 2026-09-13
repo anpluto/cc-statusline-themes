@@ -44,6 +44,7 @@ function writeFakeTranscript() {
 function payload() {
   return {
     session_id: 'preview-session',
+    session_name: '终端状态栏样式', // payload 里确实有这个名字，可作主题素材
     transcript_path: writeFakeTranscript(),
     cwd: process.cwd(),
     model: { id: 'deepseek-v4-pro', display_name: 'deepseek-v4-pro' },
@@ -65,7 +66,14 @@ function payload() {
       total_input_tokens: 94585,
       total_output_tokens: 2238,
       context_window_size: 1000000,
-      current_usage: null,
+      // 真实 payload 里这个字段是有的，且带完整拆分 —— 它是 token 细分的首选来源。
+      // 要和下面假 transcript 里的 usage 保持一致（真实情况下两者本来就相等）。
+      current_usage: {
+        input_tokens: 2169,
+        output_tokens: 2238,
+        cache_creation_input_tokens: 4096,
+        cache_read_input_tokens: 88320,
+      },
       used_percentage: 9.0,
       remaining_percentage: 91.0,
     },

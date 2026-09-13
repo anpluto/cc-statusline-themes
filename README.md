@@ -173,14 +173,14 @@ module.exports = {
 | `d.context.totalTokens` / `.tokensText` | token 数 / 已格式化的 `90.5k` |
 | `d.context.windowSize` | 窗口大小，如 `1000000` |
 | `d.cost.usd` / `.usdText` / `.durationText` / `.durationMs` | 花费 / 时长 |
-| `d.tokens.in` / `.out` / `.cacheCreation` / `.cacheRead` / `.exact` | token 细分（拆自 transcript） |
+| `d.tokens.in` / `.out` / `.cacheCreation` / `.cacheRead` / `.exact` / `.source` | token 细分，来源见下 |
 | `d.cache.warm` / `.observed` / `.hitRatio` / `.expiresAt` | prompt cache 状态 |
 | `d.counts.mem` / `.skills` / `.mcp` / `.plugins` / `.claudeMd` | 各项数量 |
 | `d.system.cpu` / `.ram` / `.disk` | 系统信息，目前恒为 `null`（见 `lib/sysinfo.js`） |
 | `d.python.name` / `.version` | 当前 conda / venv 环境，没在用则为 `null` |
 | `d.cwd` / `d.dirName` / `d.path` | 目录全路径 / 目录名 / home 缩写成 `~` 的路径 |
 | `d.user` / `d.now.hour` / `.date` / `.time` / `.datetime` | 用户名 / 当前时间各字段 |
-| `d.version` / `d.sessionId` / `d.agent` / `d.vimMode` / `d.fastMode` | 环境信息 |
+| `d.version` / `d.sessionId` / `d.sessionName` / `d.agent` / `d.vimMode` / `d.fastMode` | 环境信息 |
 | `d.fmt.tokens(n)` / `.window(n)` / `.duration(ms)` / `.bytes(n)` | 格式化工具 |
 
 ## 常见问题
@@ -193,6 +193,21 @@ module.exports = {
 
 解析 `mode con` 有个坑：它输出的最后一行是**代码页**（中文 Windows 是 936），
 不是宽度，所以必须显式匹配「列 / Columns」那一行。
+
+**token 细分（`d.tokens`）是从哪来的？**
+三级来源，`d.tokens.source` 会告诉你实际用了哪个：
+
+1. `payload.context_window.current_usage` —— **首选**。payload 直接给了
+   `input_tokens` / `output_tokens` / `cache_creation_input_tokens` /
+   `cache_read_input_tokens` 四个字段，零文件 IO，而且是 Claude Code 自己算
+   `used_percentage` 用的那份数据，最权威。
+2. 读 `transcript_path` 尾部最后一条 assistant 消息的 `usage` —— 只在
+   `current_usage` 为 `null` 时兜底（会话刚开始、还没有 assistant 消息）。
+   实测两者数值完全一致。只读文件末尾 64KB（不够再扩到 2MB），
+   3MB 的 transcript 上约 10ms。
+3. 都没有时退回 payload 的加总值（`total_input_tokens` 是三项之和，拆不开），
+   此时 `d.tokens.exact === false` —— 依赖细分的段会自己隐藏，
+   而不是显示一个算出来的假数字。
 
 **`skills` 数量为什么这么少？**
 只数得到 `~/.claude/skills/` 下的**本地**技能。Claude Code 内置的那些
