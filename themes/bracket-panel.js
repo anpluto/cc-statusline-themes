@@ -316,7 +316,7 @@ module.exports = {
 
     // 16 状态文案
     {
-      icon: '⌨',
+      icon: '',
       iconColor: C.status,
       parts: [{ text: () => TEXTS.working, color: C.status }],
     },

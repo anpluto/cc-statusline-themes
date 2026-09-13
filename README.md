@@ -66,11 +66,22 @@ node ~/.claude/statusline/install.js --context-tokens=1000000
 ## 日常使用
 
 ```bash
+node ~/.claude/statusline/pick.js                # ★ 交互式选择器：上下箭头选，回车确认
 node ~/.claude/statusline/switch.js              # 列出所有主题 + 每个的实际渲染效果
 node ~/.claude/statusline/switch.js minimal      # 切换（立即生效，不用重启）
 node ~/.claude/statusline/switch.js --list       # 只要名单，不要预览
 node ~/.claude/statusline/render.js --width=80   # 临时按 80 列渲染，调试折行用
 ```
+
+`pick.js` 的操作：`↑/↓`（或 `j`/`k`）移动，`Enter` 确认，`Esc` / `q` / `Ctrl+C` 取消。
+选中项反显，下方实时显示该主题的渲染预览。
+
+**它要在普通终端窗口里跑**，不能在 Claude Code 的 `!` 前缀里跑 —— 那里 stdin 不是
+TTY，收不到方向键。检测到不是 TTY 时它会自动降级成打印列表，所以被管道接走也不会卡住。
+
+`test-pick.js` 是这个选择器的测试，跑法 `node test-pick.js`。它演示了怎么在没有 TTY
+的环境里测 TUI：伪造 `process.stdin`/`process.stdout` 后喂方向键序列，检查最终写入
+哪个主题，并校验重绘序列。跑之前会自动备份 `active`，跑完还原。
 
 切换只写 `active` 这一个文件，下一个刷新周期（默认 10 秒）就生效。
 
