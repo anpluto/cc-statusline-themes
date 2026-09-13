@@ -85,10 +85,17 @@ const CLOSE = ' ' + paint(C.bracket, ']');
 
 // ── 小工具 ──────────────────────────────────────────────────────────
 
-/** 按当前小时取问候语 */
+/**
+ * 按当前小时取问候语：找区间起点 <= 当前小时的最后一条。
+ *
+ * 注意先复制一份按小时升序排 —— 判定用的是「最后一条命中的胜出」，
+ * 如果 TEXTS.greetings 的条目不是升序，就会静默取到错误的文案（不报错，只是显示不对）。
+ * 排一下之后，你在那个数组里随便插一条、放哪个位置都不会算错。
+ */
 function greeting(hour) {
-  let text = TEXTS.greetings[0][1];
-  for (const [from, t] of TEXTS.greetings) {
+  const buckets = [...TEXTS.greetings].sort((a, b) => a[0] - b[0]);
+  let text = buckets.length ? buckets[0][1] : '';
+  for (const [from, t] of buckets) {
     if (hour >= from) text = t;
   }
   return text;
