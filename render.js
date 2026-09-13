@@ -12,73 +12,19 @@
  */
 
 const fs = require('fs');
-const path = require('path');
 
-const { SELF_DIR, buildData, readCache, writeCache } = require('./lib/data');
+const { buildData, readCache, writeCache } = require('./lib/data');
 const { getTerminalWidth } = require('./lib/width');
+const themes = require('./lib/themes');
 const engine = require('./lib/engine');
-
-const THEMES_DIR = path.join(SELF_DIR, 'themes');
-const ACTIVE_FILE = path.join(SELF_DIR, 'active');
-const DEFAULT_THEME = 'emoji-line';
-
-/** 只允许安全的名字，避免 ../ 之类跑出 themes 目录 */
-function safeName(name) {
-  return typeof name === 'string' && /^[a-z0-9][a-z0-9-]*$/i.test(name) ? name : null;
-}
-
-function listThemes() {
-  try {
-    return fs
-      .readdirSync(THEMES_DIR)
-      .filter((f) => f.endsWith('.js'))
-      .map((f) => f.replace(/\.js$/, ''))
-      .sort();
-  } catch {
-    return [];
-  }
-}
-
-function activeThemeName() {
-  try {
-    const n = safeName(fs.readFileSync(ACTIVE_FILE, 'utf8').trim());
-    if (n) return n;
-  } catch {}
-  return DEFAULT_THEME;
-}
-
-function tryLoad(name) {
-  try {
-    const theme = require(path.join(THEMES_DIR, `${name}.js`));
-    if (theme && Array.isArray(theme.segments)) return theme;
-  } catch {}
-  return null;
-}
-
-/**
- * 加载主题。任何一步失败都**静默**降级到默认主题 ——
- * 这里绝不能往 stderr 写东西（多行报错可能漏进状态栏显示），
- * 也绝不能返回空，否则状态栏会整块消失。
- */
-function loadTheme(name) {
-  const n = safeName(name); // 名字不合法（含 ../ 等）直接当作没指定
-  if (n && n !== DEFAULT_THEME) {
-    const theme = tryLoad(n);
-    if (theme) return theme;
-  }
-  return tryLoad(DEFAULT_THEME) || {
-    name: 'fallback',
-    segments: [{ parts: [{ text: (d) => d.model.name, color: 'brightCyan' }] }],
-  };
-}
 
 function parseArgs(argv) {
   const out = { theme: null, width: null, preview: false, list: false };
   for (const a of argv) {
     if (a === '--list') out.list = true;
     else if (a === '--preview') out.preview = true;
-    else if (a.startsWith('--theme=')) out.theme = a.slice(8);
-    else if (a.startsWith('--width=')) out.width = parseInt(a.slice(8), 10);
+    else if (a.startsWith('--theme=')) out.theme = a.slice('--theme='.length);
+    else if (a.startsWith('--width=')) out.width = parseInt(a.slice('--width='.length), 10);
   }
   return out;
 }
@@ -95,19 +41,16 @@ function main() {
   const args = parseArgs(process.argv.slice(2));
 
   if (args.list) {
-    const active = activeThemeName();
-    for (const n of listThemes()) {
-      let desc = '';
-      try {
-        desc = require(path.join(THEMES_DIR, `${n}.js`)).description || '';
-      } catch {}
-      process.stdout.write(`${n === active ? '*' : ' '} ${n}${desc ? `  — ${desc}` : ''}\n`);
+    const { name: current } = themes.resolveActiveTheme();
+    for (const n of themes.listThemes()) {
+      const desc = themes.describeTheme(n);
+      process.stdout.write(`${n === current ? '*' : ' '} ${n}${desc ? `  — ${desc}` : ''}\n`);
     }
     return;
   }
 
-  const themeName = args.theme || activeThemeName();
-  const theme = loadTheme(themeName);
+  const { name: themeName } = themes.resolveActiveTheme();
+  const theme = themes.loadTheme(args.theme || themeName);
 
   let payload;
   if (args.preview) {
@@ -134,8 +77,7 @@ function main() {
   writeCache(cache);
 
   try {
-    const out = engine.render(theme, data, { width });
-    process.stdout.write(out);
+    process.stdout.write(engine.render(theme, data, { width }));
   } catch (err) {
     process.stdout.write(`statusline: 渲染失败 ${err.message}`);
   }

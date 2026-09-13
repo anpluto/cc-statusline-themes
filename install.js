@@ -21,10 +21,10 @@ const fs = require('fs');
 const os = require('os');
 const path = require('path');
 
+const themes = require('./lib/themes');
+
 const SELF_DIR = __dirname;
 const RENDER = path.join(SELF_DIR, 'render.js');
-const ACTIVE_FILE = path.join(SELF_DIR, 'active');
-const DEFAULT_THEME = 'emoji-line';
 const BACKUP_SUFFIX = '.bak-statusline';
 
 // ---------------------------------------------------------------------------
@@ -211,12 +211,13 @@ function install(opts, claudeDir) {
   fs.writeFileSync(settingsPath, JSON.stringify(next, null, 2) + '\n');
   ok('已更新 settings.json 的 statusLine');
 
-  // 主题文件：缺 active 就给个默认
-  if (!fileExists(ACTIVE_FILE)) {
-    fs.writeFileSync(ACTIVE_FILE, DEFAULT_THEME + '\n');
-    ok(`已设置默认主题 ${DEFAULT_THEME}`);
+  // 主题：缺 active 就写个默认。active 被 gitignore 了，所以 clone 下来没有它是正常的，
+  // 这里补上，让安装后的状态明确。
+  if (!themes.readActiveTheme()) {
+    themes.writeActiveTheme(themes.DEFAULT_THEME);
+    ok(`已设置默认主题 ${themes.DEFAULT_THEME}`);
   } else {
-    info(`当前主题 ${fs.readFileSync(ACTIVE_FILE, 'utf8').trim()}`);
+    info(`当前主题 ${themes.resolveActiveTheme().name}`);
   }
 
   // 自检：真跑一遍渲染
