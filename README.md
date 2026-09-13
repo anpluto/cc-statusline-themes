@@ -23,14 +23,14 @@
 ## 安装
 
 ```bash
-git clone https://github.com/YOUR_GITHUB_USERNAME/cc-statusline-themes.git ~/.claude/statusline
+git clone https://github.com/anpluto/cc-statusline-themes.git ~/.claude/statusline
 node ~/.claude/statusline/install.js
 ```
 
 Windows PowerShell 里把 `~` 换成 `$HOME`，cmd 里换成 `%USERPROFILE%`：
 
 ```powershell
-git clone https://github.com/YOUR_GITHUB_USERNAME/cc-statusline-themes.git $HOME\.claude\statusline
+git clone https://github.com/anpluto/cc-statusline-themes.git $HOME\.claude\statusline
 node $HOME\.claude\statusline\install.js
 ```
 
